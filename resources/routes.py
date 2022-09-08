@@ -57,7 +57,7 @@ def login():
     return redirect("/")
 
 # ||| Basic Logout ||| -> Session data is cleared
-@app.route('/clear')
+@app.route('/logout')
 def clear_session():
     session.clear()
     print("||-- Session should be clear --|| <> Session is:", session)

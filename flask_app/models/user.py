@@ -51,6 +51,77 @@ class User:
         if len(result) < 1:
             return False
         return cls(result[0])
+    
+    @classmethod
+    def get_by_id(cls,data):
+        query = """SELECT * 
+        FROM users 
+        WHERE id = %(id)s
+        ;"""
+        result = connectToMySQL(cls.db).query_db(query,data)
+        print("||-- Selected by id from database --|| <> Results:", result)
+        if len(result) < 1:
+            return False
+        return cls(result[0])
+
+    @classmethod
+    def get_all_sent_messages_by_id(cls, data):
+        query = """SELECT * 
+        FROM messages
+        Where user_id = %(id)s
+        ;"""
+        results = connectToMySQL(cls.db).query_db(query, data)
+        data = []
+        for item in results:
+            data.append( item )
+        return data
+
+    @classmethod
+    def send_message(cls,data):
+        query = """INSERT INTO messages 
+        (user_id, receiver_id, message, created_at, updated_at) 
+        VALUES ( %(user_id)s, %(receiver_id)s, %(message)s, NOW() , NOW() )
+        ;"""
+        result = connectToMySQL(cls.db).query_db( query, data )
+        print("The send message query result is:", result)
+        return result
+
+ # ||| Joined Tables 1:n ||| -> Users have many recipes, we want to gather all recipes and their associated user information. For each of the recipes, we are segregating the user information, generating a user object, and assigning that user to the recipe they made.
+    @classmethod
+    def get_all_joined(cls):
+        query = """SELECT * 
+        FROM recipes 
+        JOIN users 
+        ON recipes.user_id = users.id
+        ;"""
+        results = connectToMySQL(cls.db).query_db(query)
+        print(results)
+        recipe_objects = []
+        for item in results:
+            recipe_data = {
+                'id': item["id"],
+                'name': item["name"],
+                'instructions': item["instructions"], 
+                'description': item["description"],
+                'date_cooked': item["date_cooked"],
+                'under_30': item["under_30"],
+                'created_at': item["created_at"],
+                'updated_at': item["updated_at"]
+            }
+            user_data = {
+                'id': item["users.id"],
+                'first_name': item["first_name"],
+                'last_name': item["last_name"],
+                'password': item["password"],
+                'email': item["email"],
+                'created_at': item["users.created_at"],
+                'updated_at': item["users.updated_at"]
+            }
+            recipe_object = Recipe(recipe_data)
+            recipe_object.posted_by = user.User(user_data)
+            recipe_objects.append( recipe_object )
+            print("||-- Recipe objects generated --|| <> ", recipe_object)
+        return recipe_objects
 
     @staticmethod
     def validate_user(data):
@@ -75,5 +146,16 @@ class User:
             is_valid = False
         if len(data['password']) < 8:
             flash("Passwords must be longer than 8 characters.")
+            is_valid = False
+        if len(data['message']) < 5:
+            flash("Message must be at lease 5 characters long.")
+            is_valid = False
+        return is_valid
+
+    @staticmethod
+    def validate_message(data):
+        is_valid = True
+        if len(data['message']) < 5:
+            flash("Message must be at least 5 characters long.")
             is_valid = False
         return is_valid
